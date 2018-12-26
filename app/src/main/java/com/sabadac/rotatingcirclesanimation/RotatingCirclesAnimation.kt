@@ -1,5 +1,6 @@
 package com.sabadac.rotatingcirclesanimation
 
+import android.animation.AnimatorSet
 import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator
 import android.content.Context
@@ -8,7 +9,8 @@ import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
-import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.LinearInterpolator
+import kotlin.reflect.KMutableProperty0
 
 class RotatingCirclesAnimation @JvmOverloads constructor(
     context: Context,
@@ -26,51 +28,62 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
     private val bitmap = Bitmap.createBitmap(canvasSide.toInt(), canvasSide.toInt(), Bitmap.Config.ARGB_8888)
     private val bitmapCanvas = Canvas(bitmap)
-
     private var currentPosition = -4 * dpToPx(radius, context) - 2 * dpToPx(distance, context)
-    private var currentPositionFirstX = -2 * dpToPx(radius, context) - dpToPx(distance, context)
-    private var currentPositionFirstY = 0f
-    private var currentPositionAngle = 0f
+
+    private var firstRotatincCircleAngle = 0f
+    private var firstRotatingCircleY = 0f
+
+    private var secondRotatincCircleAngle = 0f
+    private var secondRotatingCircleY = 0f
+
+    private var thirdRotatincCircleAngle = 0f
+    private var thirdRotatingCircleY = 0f
+
+    private var fourthRotatincCircleAngle = 0f
+    private var fourthRotatingCircleY = 0f
 
     init {
+
         leftToRightAnimation()
+        val firstRotatingCircle = rotatingCircleAnimator(-1, ::firstRotatincCircleAngle, ::firstRotatingCircleY)
+        val secondRotatingCircle = rotatingCircleAnimator(-1, ::secondRotatincCircleAngle, ::secondRotatingCircleY)
+        val thirdRotatingCircle = rotatingCircleAnimator(-1, ::thirdRotatincCircleAngle, ::thirdRotatingCircleY)
+        val fourthRotatingCircle = rotatingCircleAnimator(-1, ::fourthRotatincCircleAngle, ::fourthRotatingCircleY)
+
+        val animatorSet = AnimatorSet()
+        animatorSet.startDelay = 2000
+        animatorSet.playSequentially(
+            firstRotatingCircle,
+            secondRotatingCircle,
+            thirdRotatingCircle,
+            fourthRotatingCircle
+        )
+        animatorSet.start()
+
     }
 
-    private fun workInProgress() {
-        val currentPositionXProperty = "currentPositionX"
-        val currentPositionYProperty = "currentPositionY"
-        val currentPositionAngleProperty = "currentPositionAngle"
-        val currentPositionXPropertyHolder = PropertyValuesHolder.ofFloat(
-            currentPositionXProperty,
-            -2 * dpToPx(radius, context) - dpToPx(distance, context),
-            0f
-        )
-        val currentPositionYPropertyHolder = PropertyValuesHolder.ofFloat(
-            currentPositionYProperty,
-            0f,
-            -2 * dpToPx(radius, context) - dpToPx(distance, context)
-        ) // - 2 * dpToPx(radius, context) - dpToPx(distance, context)
-        val currentPositionAnglePropertyHolder = PropertyValuesHolder.ofFloat(currentPositionAngleProperty, 0f, -45f)
+    fun rotatingCircleAnimator(
+        factor: Int,
+        angleProperty0: KMutableProperty0<Float>,
+        yProperty0: KMutableProperty0<Float>
+    ): ValueAnimator {
+        val angleProperty = "angle"
+        val yProperty = "y"
+        val anglePropertyHolder = PropertyValuesHolder.ofFloat(angleProperty, 0f, 180f * factor)
+        val yPropertyHolder = PropertyValuesHolder.ofFloat(yProperty, 0f, factor * dpToPx(radius, context), 0f)
         val valueAnimator = ValueAnimator()
-        valueAnimator.setValues(
-            currentPositionXPropertyHolder,
-            currentPositionYPropertyHolder,
-            currentPositionAnglePropertyHolder
-        )
-        valueAnimator.duration = 3000
-//        valueAnimator.repeatMode = ValueAnimator.REVERSE
-//        valueAnimator.repeatCount = ValueAnimator.INFINITE
-        valueAnimator.startDelay = 2000
-        valueAnimator.interpolator = AccelerateDecelerateInterpolator()
+        valueAnimator.setValues(anglePropertyHolder, yPropertyHolder)
+        valueAnimator.duration = 1000
+        valueAnimator.interpolator = LinearInterpolator()
         valueAnimator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
             override fun onAnimationUpdate(animation: ValueAnimator?) {
-                currentPositionFirstX = animation?.getAnimatedValue(currentPositionXProperty) as Float
-                currentPositionFirstY = animation?.getAnimatedValue(currentPositionYProperty) as Float
-                currentPositionAngle = animation?.getAnimatedValue(currentPositionAngleProperty) as Float
+                angleProperty0.set(animation?.getAnimatedValue(angleProperty) as Float)
+                yProperty0.set(animation?.getAnimatedValue(yProperty) as Float)
                 invalidate()
             }
         })
-        valueAnimator.start()
+        return valueAnimator
+
     }
 
     private fun leftToRightAnimation() {
@@ -82,11 +95,11 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
         )
         val valueAnimator = ValueAnimator()
         valueAnimator.setValues(currentPositionPropertyHolder)
-        valueAnimator.duration = 3000
+        valueAnimator.duration = 4000
         valueAnimator.repeatMode = ValueAnimator.REVERSE
-        valueAnimator.repeatCount = ValueAnimator.INFINITE
+        valueAnimator.repeatCount = 1
         valueAnimator.startDelay = 2000
-        valueAnimator.interpolator = AccelerateDecelerateInterpolator()
+        valueAnimator.interpolator = LinearInterpolator()
         valueAnimator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
             override fun onAnimationUpdate(animation: ValueAnimator?) {
                 currentPosition = animation?.getAnimatedValue(currentPositionProperty) as Float
@@ -105,16 +118,25 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
         paint.color = ContextCompat.getColor(context, R.color.firstCircleColor)
         paint.alpha = 255
-        bitmapCanvas.drawCircle(bitmap.width / 2f + currentPosition, bitmap.height / 2f, dpToPx(radius, context), paint)
+        bitmapCanvas.drawCircle(
+            bitmap.width / 2f + currentPosition,
+            bitmap.height / 2f,
+            dpToPx(radius, context),
+            paint
+        )
         bitmapCanvas.restore()
 
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.secondCircleColor)
         paint.alpha = 155
-        bitmapCanvas.rotate(currentPositionAngle)
+        bitmapCanvas.rotate(
+            firstRotatincCircleAngle,
+            (canvasSide + dpToPx(distance, context)) / 2f - 4 * dpToPx(radius, context),
+            canvasSide / 2f + firstRotatingCircleY
+        )
         bitmapCanvas.drawCircle(
-            canvasSide / 2f + currentPositionFirstX,
-            canvasSide / 2f + currentPositionFirstY,
+            canvasSide / 2f + -2 * dpToPx(radius, context) - dpToPx(distance, context),
+            canvasSide / 2f + 0f,
             dpToPx(radius, context),
             paint
         )
@@ -123,12 +145,22 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.thirdCircleColor)
         paint.alpha = 155
+        bitmapCanvas.rotate(
+            secondRotatincCircleAngle,
+            (canvasSide - dpToPx(distance, context)) / 2f - dpToPx(radius, context),
+            canvasSide / 2f + secondRotatingCircleY
+        )
         bitmapCanvas.drawCircle(canvasSide / 2f, canvasSide / 2f, dpToPx(radius, context), paint)
         bitmapCanvas.restore()
 
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.fourthCircleColor)
         paint.alpha = 155
+        bitmapCanvas.rotate(
+            thirdRotatincCircleAngle,
+            (canvasSide + dpToPx(distance, context)) / 2f + dpToPx(radius, context),
+            canvasSide / 2f + thirdRotatingCircleY
+        )
         bitmapCanvas.drawCircle(
             canvasSide / 2f + 2 * dpToPx(radius, context) + dpToPx(distance, context),
             canvasSide / 2f,
@@ -140,6 +172,11 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.fifthCircleColor)
         paint.alpha = 155
+        bitmapCanvas.rotate(
+            fourthRotatincCircleAngle,
+            (canvasSide - dpToPx(distance, context)) / 2f + 4 * dpToPx(radius, context),
+            canvasSide / 2f + fourthRotatingCircleY
+        )
         bitmapCanvas.drawCircle(
             canvasSide / 2f + 4 * dpToPx(radius, context) + 2 * dpToPx(distance, context),
             canvasSide / 2f,
