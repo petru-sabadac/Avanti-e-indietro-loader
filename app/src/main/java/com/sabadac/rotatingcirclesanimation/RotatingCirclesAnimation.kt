@@ -1,14 +1,13 @@
 package com.sabadac.rotatingcirclesanimation
 
-import android.animation.AnimatorSet
-import android.animation.PropertyValuesHolder
-import android.animation.ValueAnimator
+import android.animation.*
 import android.content.Context
 import android.graphics.*
 import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import kotlin.reflect.KMutableProperty0
 
@@ -18,6 +17,8 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    private val duration = 1200L
+    private val delay = 300L
     private val radius = 19
     private val distance = 9
     private val numberOfCircles = 5
@@ -44,21 +45,48 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
     init {
 
-        leftToRightAnimation()
+        val leftToRightAnimation = leftToRightAnimation(-1)
+        val rightToLeftAnimation = leftToRightAnimation(1)
+        val animatorSet = AnimatorSet()
         val firstRotatingCircle = rotatingCircleAnimator(-1, ::firstRotatincCircleAngle, ::firstRotatingCircleY)
+        firstRotatingCircle.startDelay = delay
         val secondRotatingCircle = rotatingCircleAnimator(-1, ::secondRotatincCircleAngle, ::secondRotatingCircleY)
         val thirdRotatingCircle = rotatingCircleAnimator(-1, ::thirdRotatincCircleAngle, ::thirdRotatingCircleY)
         val fourthRotatingCircle = rotatingCircleAnimator(-1, ::fourthRotatincCircleAngle, ::fourthRotatingCircleY)
+        fourthRotatingCircle.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator?) {
+                super.onAnimationEnd(animation)
+                rightToLeftAnimation.start()
+            }
+        })
+        val fourthRotatingCircleReverse =
+            rotatingCircleAnimator(1, ::fourthRotatincCircleAngle, ::fourthRotatingCircleY)
+        fourthRotatingCircleReverse.startDelay = delay
+        val thirdRotatingCircleReverse = rotatingCircleAnimator(1, ::thirdRotatincCircleAngle, ::thirdRotatingCircleY)
+        val secondRotatingCircleReverse =
+            rotatingCircleAnimator(1, ::secondRotatincCircleAngle, ::secondRotatingCircleY)
+        val firstRotatingCircleReverse = rotatingCircleAnimator(1, ::firstRotatincCircleAngle, ::firstRotatingCircleY)
+        firstRotatingCircleReverse.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator?) {
+                super.onAnimationEnd(animation)
+                animatorSet.start()
+                leftToRightAnimation.start()
+            }
+        })
 
-        val animatorSet = AnimatorSet()
-        animatorSet.startDelay = 2000
         animatorSet.playSequentially(
             firstRotatingCircle,
             secondRotatingCircle,
             thirdRotatingCircle,
-            fourthRotatingCircle
+            fourthRotatingCircle,
+            fourthRotatingCircleReverse,
+            thirdRotatingCircleReverse,
+            secondRotatingCircleReverse,
+            firstRotatingCircleReverse
         )
+
         animatorSet.start()
+        leftToRightAnimation.start()
 
     }
 
@@ -69,12 +97,18 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
     ): ValueAnimator {
         val angleProperty = "angle"
         val yProperty = "y"
-        val anglePropertyHolder = PropertyValuesHolder.ofFloat(angleProperty, 0f, 180f * factor)
+        val anglePropertyHolder =
+            PropertyValuesHolder.ofFloat(angleProperty, if (factor == 1) 180f else 0f, if (factor == 1) 0f else -180f)
         val yPropertyHolder = PropertyValuesHolder.ofFloat(yProperty, 0f, factor * dpToPx(radius, context), 0f)
         val valueAnimator = ValueAnimator()
         valueAnimator.setValues(anglePropertyHolder, yPropertyHolder)
-        valueAnimator.duration = 1000
-        valueAnimator.interpolator = LinearInterpolator()
+        valueAnimator.duration = duration / 4
+        valueAnimator.interpolator = AccelerateDecelerateInterpolator()
+        valueAnimator.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationStart(animation: Animator?) {
+                super.onAnimationStart(animation)
+            }
+        })
         valueAnimator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
             override fun onAnimationUpdate(animation: ValueAnimator?) {
                 angleProperty0.set(animation?.getAnimatedValue(angleProperty) as Float)
@@ -86,19 +120,17 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
     }
 
-    private fun leftToRightAnimation() {
+    private fun leftToRightAnimation(factor: Int): ValueAnimator {
         val currentPositionProperty = "currentPosition"
         val currentPositionPropertyHolder = PropertyValuesHolder.ofFloat(
             currentPositionProperty,
-            -4 * dpToPx(radius, context) - 2 * dpToPx(distance, context),
-            4 * dpToPx(radius, context) + 2 * dpToPx(distance, context)
+            factor * (4 * dpToPx(radius, context) + 2 * dpToPx(distance, context)),
+            -factor * (4 * dpToPx(radius, context) + 2 * dpToPx(distance, context))
         )
         val valueAnimator = ValueAnimator()
         valueAnimator.setValues(currentPositionPropertyHolder)
-        valueAnimator.duration = 4000
-        valueAnimator.repeatMode = ValueAnimator.REVERSE
-        valueAnimator.repeatCount = 1
-        valueAnimator.startDelay = 2000
+        valueAnimator.duration = duration
+        valueAnimator.startDelay = delay
         valueAnimator.interpolator = LinearInterpolator()
         valueAnimator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
             override fun onAnimationUpdate(animation: ValueAnimator?) {
@@ -106,7 +138,7 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
                 invalidate()
             }
         })
-        valueAnimator.start()
+        return valueAnimator
     }
 
     override fun onDraw(canvas: Canvas?) {
@@ -128,7 +160,7 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.secondCircleColor)
-        paint.alpha = 155
+        paint.alpha = 255
         bitmapCanvas.rotate(
             firstRotatincCircleAngle,
             (canvasSide + dpToPx(distance, context)) / 2f - 4 * dpToPx(radius, context),
@@ -144,7 +176,7 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.thirdCircleColor)
-        paint.alpha = 155
+        paint.alpha = 255
         bitmapCanvas.rotate(
             secondRotatincCircleAngle,
             (canvasSide - dpToPx(distance, context)) / 2f - dpToPx(radius, context),
@@ -155,7 +187,7 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.fourthCircleColor)
-        paint.alpha = 155
+        paint.alpha = 255
         bitmapCanvas.rotate(
             thirdRotatincCircleAngle,
             (canvasSide + dpToPx(distance, context)) / 2f + dpToPx(radius, context),
@@ -171,7 +203,7 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
 
         bitmapCanvas.save()
         paint.color = ContextCompat.getColor(context, R.color.fifthCircleColor)
-        paint.alpha = 155
+        paint.alpha = 255
         bitmapCanvas.rotate(
             fourthRotatincCircleAngle,
             (canvasSide - dpToPx(distance, context)) / 2f + 4 * dpToPx(radius, context),
