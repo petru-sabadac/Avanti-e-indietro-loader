@@ -112,8 +112,8 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
         firstRotatingCircleReverse.addListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator?) {
                 super.onAnimationEnd(animation)
-                animatorSet.start()
-                leftToRightAnimation.start()
+//                animatorSet.start()
+//                leftToRightAnimation.start()
             }
         })
 
