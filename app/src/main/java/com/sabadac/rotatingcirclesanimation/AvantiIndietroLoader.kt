@@ -12,7 +12,7 @@ import android.view.animation.LinearInterpolator
 import kotlin.reflect.KMutableProperty0
 import kotlin.reflect.KProperty0
 
-class RotatingCirclesAnimation @JvmOverloads constructor(
+class AvantiIndietroLoader @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
@@ -33,7 +33,7 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
     private val secondRotatingCirclePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val thirdRotatingCirclePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val fourthRotatingCirclePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private val bitmap = Bitmap.createBitmap(canvasSide.toInt(), canvasSide.toInt(), Bitmap.Config.ARGB_8888)
     private val bitmapCanvas = Canvas(bitmap)
@@ -258,7 +258,7 @@ class RotatingCirclesAnimation @JvmOverloads constructor(
         )
         bitmapCanvas.restore()
 
-        canvas?.drawBitmap(bitmap, (width - bitmap.width) / 2f, (height - bitmap.height) / 2f, paint)
+        canvas?.drawBitmap(bitmap, (width - bitmap.width) / 2f, (height - bitmap.height) / 2f, bitmapPaint)
     }
 
     private fun dpToPx(dp: Int, context: Context): Float =
