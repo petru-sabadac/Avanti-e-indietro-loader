@@ -5,8 +5,8 @@
     <color name="colorAccent">#D81B60</color>
 
     <color name="firstCircleColor">#ff9006</color>
-    <color name="secondCircleColor">#ff7120</color>
-    <color name="thirdCircleColor">#ff4b42</color>
-    <color name="fourthCircleColor">#ff2663</color>
-    <color name="fifthCircleColor">#ff087d</color>
+    <color name="secondCircleColor">#ff721f</color>
+    <color name="thirdCircleColor">#ff4c42</color>
+    <color name="fourthCircleColor">#ff2564</color>
+    <color name="fifthCircleColor">#ff067e</color>
 </resources>
