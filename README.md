@@ -4,4 +4,4 @@ Tried to make a loading animation on Android with Kotlin using onDraw() and Valu
 https://dribbble.com/shots/3633228-Avanti-e-indietro-loader
 
 
-![Rotating circles loading animation](animation.gif)
+![Rotating circles loading animation](avanti-animation.gif)
