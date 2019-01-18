@@ -2,6 +2,7 @@ package com.sabadac.rotatingcirclesanimation
 
 import android.animation.*
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.*
 import android.support.v4.content.ContextCompat
 import android.support.v4.view.animation.PathInterpolatorCompat
@@ -19,14 +20,15 @@ class AvantiIndietroLoader @JvmOverloads constructor(
     private val radius = 20
     private val distance = 15
     private val numberOfCircles = 6
-    private val canvasSide = numberOfCircles * dpToPx(radius * 2 + distance, context)
+    private val canvasWidth = numberOfCircles * dpToPx(radius * 2 + distance)
+    private val canvasHeight = 3 * dpToPx(radius * 2 + distance)
     private val shadowAlpha = 50
     private val shadowX = 6f
     private val shadowY = 20f
     private val shadowRadius = 9.5f
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val bitmap = Bitmap.createBitmap(canvasSide.toInt(), canvasSide.toInt(), Bitmap.Config.ARGB_8888)
+    private val bitmap = Bitmap.createBitmap(canvasWidth.toInt(), canvasHeight.toInt(), Bitmap.Config.ARGB_8888)
     private val bitmapCanvas = Canvas(bitmap)
 
     private val points = Array(5) { PointF() }
@@ -36,11 +38,12 @@ class AvantiIndietroLoader @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val duration = 300L
     private val delay = 300L
+    private val animatorSet = AnimatorSet()
 
     init {
         initColorsAndPoints()
         resetColorsAndPoints()
-        val animatorSet = AnimatorSet()
+
         animatorSet.playSequentially(
             moveTo(1, false, delay),
             moveTo(2),
@@ -60,16 +63,22 @@ class AvantiIndietroLoader @JvmOverloads constructor(
         animatorSet.start()
     }
 
+    override fun clearAnimation() {
+        animatorSet.removeAllListeners()
+        animatorSet.cancel()
+        super.clearAnimation()
+    }
+
     private fun moveTo(to: Int, isBackwards: Boolean = false, delay: Long = 0L): AnimatorSet {
         val initialIndex = if (isBackwards) to + 1 else to - 1
         val initialPathIndex = if (isBackwards) to + 1 else to
 
         val path = Path()
         val rectF = RectF()
-        rectF.left = initialPoints[initialPathIndex].x - 2 * dpToPx(radius, context) - dpToPx(distance, context)
+        rectF.left = initialPoints[initialPathIndex].x - 2 * dpToPx(radius) - dpToPx(distance)
         rectF.right = initialPoints[initialPathIndex].x
-        rectF.top = initialPoints[0].y - 2 * dpToPx(radius, context) - dpToPx(distance, context)
-        rectF.bottom = initialPoints[0].y + 2 * dpToPx(radius, context) + dpToPx(distance, context)
+        rectF.top = initialPoints[0].y - 2 * dpToPx(radius) - dpToPx(distance)
+        rectF.bottom = initialPoints[0].y + 2 * dpToPx(radius) + dpToPx(distance)
         val sweepAngle = if (isBackwards) 180f else -180f
         path.addArc(rectF, 0f, sweepAngle)
 
@@ -77,32 +86,28 @@ class AvantiIndietroLoader @JvmOverloads constructor(
             ValueAnimator.ofObject(ArgbEvaluator(), initialColors[initialIndex], initialColors[to])
         val rotatingColor = ArgbEvaluator()
         movingColorAnimator.interpolator = LinearInterpolator()
-        movingColorAnimator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
-            override fun onAnimationUpdate(animation: ValueAnimator?) {
-                val fraction = animation!!.animatedFraction
-                colors[0] = animation?.animatedValue as Int
-                points[0].x = initialPoints[initialIndex].x + fraction *
-                        (initialPoints[to].x - initialPoints[initialIndex].x)
-                colors[initialPathIndex] =
-                        rotatingColor.evaluate(fraction, initialColors[to], initialColors[initialIndex]) as Int
+        movingColorAnimator.addUpdateListener { animation ->
+            val fraction = animation.animatedFraction
+            colors[0] = animation.animatedValue as Int
+            points[0].x = initialPoints[initialIndex].x + fraction *
+                    (initialPoints[to].x - initialPoints[initialIndex].x)
+            colors[initialPathIndex] =
+                    rotatingColor.evaluate(fraction, initialColors[to], initialColors[initialIndex]) as Int
 
-                invalidate()
-            }
-        })
+            invalidate()
+        }
 
         val rotatingCircleAnimator = ValueAnimator.ofFloat(0f, 1f)
-        rotatingCircleAnimator.interpolator = PathInterpolatorCompat.create(0.42f,0.0f,0.58f,1.0f)
-        rotatingCircleAnimator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
-            override fun onAnimationUpdate(animation: ValueAnimator?) {
-                val fraction = if (isBackwards) 1 - animation!!.animatedFraction else animation!!.animatedFraction
-                val point = FloatArray(2)
-                val pathMeasure = PathMeasure(path, false)
-                pathMeasure.getPosTan(pathMeasure.length * fraction, point, null)
-                points[initialPathIndex].x = point[0]
-                points[initialPathIndex].y = point[1]
-                invalidate()
-            }
-        })
+        rotatingCircleAnimator.interpolator = PathInterpolatorCompat.create(0.42f, 0.0f, 0.58f, 1.0f)
+        rotatingCircleAnimator.addUpdateListener { animation ->
+            val fraction = if (isBackwards) 1 - animation!!.animatedFraction else animation!!.animatedFraction
+            val point = FloatArray(2)
+            val pathMeasure = PathMeasure(path, false)
+            pathMeasure.getPosTan(pathMeasure.length * fraction, point, null)
+            points[initialPathIndex].x = point[0]
+            points[initialPathIndex].y = point[1]
+            invalidate()
+        }
 
         val animatorSet = AnimatorSet()
         animatorSet.startDelay = delay
@@ -115,30 +120,30 @@ class AvantiIndietroLoader @JvmOverloads constructor(
 
     private fun initColorsAndPoints() {
         initialColors[0] = ContextCompat.getColor(context, R.color.firstCircleColor)
-        initialPoints[0].x = canvasSide / 2f - 4 * dpToPx(radius, context) - 2 * dpToPx(distance, context)
-        initialPoints[0].y = canvasSide / 2f
+        initialPoints[0].x = canvasWidth / 2f - 4 * dpToPx(radius) - 2 * dpToPx(distance)
+        initialPoints[0].y = canvasHeight / 2f
 
         initialColors[1] = ContextCompat.getColor(context, R.color.secondCircleColor)
-        initialPoints[1].x = canvasSide / 2f + -2 * dpToPx(radius, context) - dpToPx(distance, context)
-        initialPoints[1].y = canvasSide / 2f
+        initialPoints[1].x = canvasWidth / 2f + -2 * dpToPx(radius) - dpToPx(distance)
+        initialPoints[1].y = canvasHeight / 2f
 
         initialColors[2] = ContextCompat.getColor(context, R.color.thirdCircleColor)
-        initialPoints[2].x = canvasSide / 2f
-        initialPoints[2].y = canvasSide / 2f
+        initialPoints[2].x = canvasWidth / 2f
+        initialPoints[2].y = canvasHeight / 2f
 
         initialColors[3] = ContextCompat.getColor(context, R.color.fourthCircleColor)
-        initialPoints[3].x = canvasSide / 2f + 2 * dpToPx(radius, context) + dpToPx(distance, context)
-        initialPoints[3].y = canvasSide / 2f
+        initialPoints[3].x = canvasWidth / 2f + 2 * dpToPx(radius) + dpToPx(distance)
+        initialPoints[3].y = canvasHeight / 2f
 
         initialColors[4] = ContextCompat.getColor(context, R.color.fifthCircleColor)
-        initialPoints[4].x = canvasSide / 2f + 4 * dpToPx(radius, context) + 2 * dpToPx(distance, context)
-        initialPoints[4].y = canvasSide / 2f
+        initialPoints[4].x = canvasWidth / 2f + 4 * dpToPx(radius) + 2 * dpToPx(distance)
+        initialPoints[4].y = canvasHeight / 2f
     }
 
     private fun resetColorsAndPoints() {
         initialPoints.forEachIndexed { index, pointF ->
             colors[index] = initialColors[index]
-            points[index].set(initialPoints[index])
+            points[index].set(pointF)
         }
     }
 
@@ -167,7 +172,7 @@ class AvantiIndietroLoader @JvmOverloads constructor(
             bitmapCanvas.drawCircle(
                 pointF.x,
                 pointF.y,
-                dpToPx(radius, context),
+                dpToPx(radius),
                 paint
             )
             bitmapCanvas.restore()
@@ -177,7 +182,7 @@ class AvantiIndietroLoader @JvmOverloads constructor(
 
     }
 
-    private fun dpToPx(dp: Int, context: Context): Float =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), context.resources.displayMetrics)
+    private fun dpToPx(dp: Int): Float =
+        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), Resources.getSystem().displayMetrics)
 
 }
